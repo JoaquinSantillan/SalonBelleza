@@ -2,6 +2,7 @@ const { getConnection } = require("../services/databaseServices")
 const sql = require('mssql');
 const hashPassword = require("../services/hashPass");
 const jwt = require('jsonwebtoken');
+const generateJWT = require("../services/generateJWT");
 
 
 const getAllTurn = async(req,res)=>
@@ -13,28 +14,15 @@ const getAllTurn = async(req,res)=>
         res.status(200).json(turns.recordset)
     }
 
+
 const createUser = async(req,res)=>
     {  
 
-        const username = req.body.username;
         const password = req.body.password;
         const passwordEncrypt = await hashPassword(password);
+        const username = req.body.username;
 
-
-        const tokenAcceso = jwt.sign({
-            username,
-            exp:Date.now() + 3600 * 1000
-        },process.env.SECRET_TOKEN)
-
-        res.send({tokenAcceso})
-
-        const token = req.headers.authorization.split(' ')[1]
-        const payload = jwt.verify(token,process.env.SECRET_TOKEN);
-
-        if(Date.now > payload.exp)
-            {
-                res.status(401).json({tokenMessage:"token expired"});
-            }
+        //const token = generateJWT(username);
 
         try {
             const pool = await getConnection()
@@ -47,7 +35,7 @@ const createUser = async(req,res)=>
             .input('edad',sql.Int,req.body.edad)
             .query("insert into users (name,lastname,username,password,edad) values (@name,@lastname,@username,@password,@edad)")
         
-            res.status(201).json(createUser.recordset, tokenAcceso)
+            res.status(201).json(createUser.recordset, token)
             console.log(createUser)
         } catch (error) {
             console.log(error+'error: no se pudo crear el usuario intente nuevamente')
@@ -59,6 +47,8 @@ const createUser = async(req,res)=>
     
 const createTurn = async(req,res)=>
     {  
+
+        const token = req.user;
 
         try{
         const pool = await getConnection();
@@ -86,7 +76,7 @@ const createTurn = async(req,res)=>
         res.json(createTurn.recordset);
         } catch (error) {
         console.error('Error al crear turno:', error);
-        res.status(500).json({ error: 'Error al crear turno' });
+        res.status(500).json({ error: 'Error al crear turno'});
         }
     }
 

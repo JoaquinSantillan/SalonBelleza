@@ -1,30 +1,21 @@
 const jwt = require('jsonwebtoken')
+require('dotenv').config();
 
-function authenticationUser(req,res,next)
+function VerifyTokenAuth(req,res,next)
 {
-    const authHeader = req.headers['authorization'];
-  
-    if (!authHeader) {
-      return res.sendStatus(401); 
-    }
 
-    const token = authHeader && authHeader.split(' ')[1];
+//controlar mensajes si no hay tokens
+        const token = req.headers.authorization.split(' ')[1]
 
-    if(token == null)
-        {
-            return res.status(401).json({authMessage:"usuario no auth por favor inicie sesion"})
-        }
-    
-    jwt.verify(token,'token_secret',(err,user)=>
-        {
-            if(err)
-                {
-                    return res.status(403)
-                }
-            req.user = user;
-            next();
-        })
+        const payload = jwt.verify(token,process.env.SECRET_TOKEN);
+
+        if(Date.now > payload.exp)
+            {
+                res.status(401).json({tokenMessage:"token expired"});
+            }
+    req.user = payload
+    next()
     
 }
 
-module.exports = authenticationUser;
+module.exports = VerifyTokenAuth;
